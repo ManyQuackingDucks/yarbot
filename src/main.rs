@@ -27,10 +27,12 @@ mod constant;
 async fn main() {
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let framework = StandardFramework::new().configure(|c| {
-        c.with_whitespace(true)
-            .delimiters(vec![", ", ","])
-            .prefix("~yar")
-    });
+            c.with_whitespace(true)
+                .delimiters(vec![", ", ","])
+                .prefix("~yar")
+                .allow_dm(false)
+        })
+        .group(&BASIC_GROUP);
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .framework(framework)
