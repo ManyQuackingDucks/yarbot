@@ -1,7 +1,8 @@
 use std::{env, vec};
 
 use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult};
+use serenity::framework::standard::{Args, CommandResult, CommandError};
+
 use serenity::model::channel::Message;
 use serenity::prelude::*;
 use serenity::{
@@ -23,8 +24,9 @@ impl EventHandler for Handler {
 #[allow(dead_code)]
 mod constant;
 
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    dotenv::dotenv().unwrap();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let framework = StandardFramework::new().configure(|c| {
             c.with_whitespace(true)
@@ -43,80 +45,86 @@ async fn main() {
 }
 
 #[command("raid")]
-#[allowed_roles("Captian")]
+#[allowed_roles("Captian", "YarDev")]
 #[only_in(guilds)]
 #[sub_commands(start, end)]
 async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.reply(&ctx.http, "~yar raid <start, end>").await?;
+    msg.reply(&ctx.http, "~yar raid <start {username}, end>").await?;
     Ok(())
 }
 #[command("start")]
-#[allowed_roles("Captian")]
+#[allowed_roles("Captian", "YarDev")]
 #[only_in(guilds)]
-#[description("Start a raid")]
+#[description("Start a raid. Provide the username that everyone will be joining the raid with.")]
 /// Unwraps are allowed on the serde_json stuff because I can guarrentee that as long as roblox is avaiable
 /// and there is one person in the game they will not panic
-async fn start(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+    let id_url = constant::get_id_url(&args.single::<String>()?);
     let mut mes = msg.reply(&ctx, "Starting a raid").await?;
     let mut vec = vec![];
-    let mut servers = vec![];
-    let mut threads = vec![];
-    let client = reqwest::Client::new();
-    println!("Starting raid");
+    let cookie = format!(".ROBLOSECURITY={}", std::env::var("ROBLO_SECURITY")?);
+    let url = "https://web.roblox.com".parse::<reqwest::Url>()?;
+    let jar = reqwest::cookie::Jar::default();
+    jar.add_cookie_str(&cookie, &url);
+    let client = reqwest::ClientBuilder::new()
+        .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0")
+        .cookie_store(true)
+        .cookie_provider(std::sync::Arc::new(jar))
+        .gzip(true)
+        .build()?;
+    let id_res = client.get(&id_url).send().await?;
+    if !id_res.status().is_success(){
+        mes.edit(&ctx, |m| m.content("Yar? Did you misspell the username put in")).await?;
+        return Err(CommandError::from("Could not get username"));
+    }
+    let id_json: serde_json::Value = serde_json::from_str(&id_res.text().await?)?;
+    let id = id_json.as_object().unwrap()["Id"].as_u64().unwrap().to_string();
+    let res = client.get(constant::get_avatar_url(&id)).send().await.unwrap();
+    let avatar_url = res.url().as_str();
     for i in 0..constant::REQUEST_LIMIT {
-        let client = client.clone();
-        threads.push(tokio::spawn(async move {
-            let url = constant::get_game_instances(constant::PLACE_ID, i * 10);
-            let res = client.get(url).send().await?;
-    
-            let res_json: serde_json::Value = serde_json::from_str(&res.text().await?)?;
-            let server = res_json.as_object().unwrap()["Collection"].as_array().unwrap().clone();
-            CommandResult::Ok(server)
-        }));
-    }
-    println!("Joining threads");
-    for i in threads{
-        let mut x: Vec<serde_json::Value> = i.await??;
-        servers.append(&mut x);
-    }
-    println!("Finding guid");
-    for i in servers{
-        for y in i.as_object().unwrap()["CurrentPlayers"].as_array().unwrap() {
-            if y.as_object().unwrap()["Id"].as_str().unwrap() == constant::CAPTAIN_ID {
-                vec.push(i.clone()); //Should really only be one
+        let url = constant::get_game_instances(constant::PLACE_ID, i);
+        let res = client.get(url).send().await?;
+        let json = res.text().await?;
+        let json: serde_json::Value = serde_json::from_str(&json)?;
+        let server = json.as_object().unwrap().clone();
+        if server["Collection"].as_array().unwrap().is_empty(){
+            break;
+        }
+        for x in server["Collection"].as_array().unwrap().clone() {
+            for y in x.as_object().unwrap()["CurrentPlayers"].as_array().unwrap() {
+                if y.as_object().unwrap()["Thumbnail"].as_object().unwrap()["Url"].as_str().unwrap() == avatar_url {
+                    vec.push(x.as_object().unwrap()["Guid"].as_str().unwrap().to_string()); //Should really only be one
+                }
             }
         }
     }
 
     if vec.is_empty() {
         mes.edit(&ctx.http, |m| {
-            m.content("Yar! I could not find the captain online!")
+            m.content("Yar! Are you online captian?")
         })
         .await?;
     } else {
         let join_url = constant::get_join_url(
             constant::PLACE_ID,
-            vec[0].as_object().unwrap()["Guid"].as_str().unwrap(),
+            &vec[0],
         );
         mes.edit(&ctx.http, |m| {
             m.content(format!(
-                "@everyone Yar! Rading time (open url in web browser to join captian):\n{join_url}"
+                "@everyone Yar! Rading time (open url in web browser to join your captian):\n{join_url}"
             ))
         })
         .await?;
-        mes.pin(&ctx.http).await?;
     }
     Ok(())
 }
 
 #[command("end")]
-#[allowed_roles("Captian")]
+#[allowed_roles("Captian", "YarDev")]
 #[only_in(guilds)]
 #[description("End a raid")]
 async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.reply(&ctx.http, "@everyone Yar! The raid is now over!")
-        .await?
-        .pin(&ctx.http)
         .await?;
     Ok(())
 }
