@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, vec};
 
 use serenity::framework::standard::macros::{command, group};
 use serenity::framework::standard::{Args, CommandResult};
@@ -59,23 +59,35 @@ async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 async fn start(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let mut mes = msg.reply(&ctx, "Starting a raid").await?;
     let mut vec = vec![];
+    let mut servers = vec![];
+    let mut threads = vec![];
     let client = reqwest::Client::new();
+    println!("Starting raid");
     for i in 0..constant::REQUEST_LIMIT {
-        let url = constant::get_game_instances(constant::PLACE_ID, i * 10);
-        let res = client.get(url).send().await?;
-
-        let res_json: serde_json::Value = serde_json::from_str(&res.text().await?)?;
-        for x in res_json.as_object().unwrap()["Collection"]
-            .as_array()
-            .unwrap()
-        {
-            for y in x.as_object().unwrap()["CurrentPlayers"].as_array().unwrap() {
-                if y.as_object().unwrap()["Id"].as_str().unwrap() == constant::CAPTAIN_ID {
-                    vec.push(x.clone()); //Should really only be one
-                }
+        let client = client.clone();
+        threads.push(tokio::spawn(async move {
+            let url = constant::get_game_instances(constant::PLACE_ID, i * 10);
+            let res = client.get(url).send().await?;
+    
+            let res_json: serde_json::Value = serde_json::from_str(&res.text().await?)?;
+            let server = res_json.as_object().unwrap()["Collection"].as_array().unwrap().clone();
+            CommandResult::Ok(server)
+        }));
+    }
+    println!("Joining threads");
+    for i in threads{
+        let mut x: Vec<serde_json::Value> = i.await??;
+        servers.append(&mut x);
+    }
+    println!("Finding guid");
+    for i in servers{
+        for y in i.as_object().unwrap()["CurrentPlayers"].as_array().unwrap() {
+            if y.as_object().unwrap()["Id"].as_str().unwrap() == constant::CAPTAIN_ID {
+                vec.push(i.clone()); //Should really only be one
             }
         }
     }
+
     if vec.is_empty() {
         mes.edit(&ctx.http, |m| {
             m.content("Yar! I could not find the captain online!")
