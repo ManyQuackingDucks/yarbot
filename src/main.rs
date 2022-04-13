@@ -59,8 +59,15 @@ async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// Unwraps are allowed on the serde_json stuff because I can guarrentee that as long as roblox is avaiable
 /// and there is one person in the game they will not panic
 async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let id_url = constant::get_id_url(&args.single::<String>()?);
     let mut mes = msg.reply(&ctx, "Starting a raid").await?;
+    let username;
+    if let Ok(user) = args.single::<String>(){
+        username = user
+    } else {
+        mes.edit(&ctx.http, |m|m.content("~yar raid start {username}")).await?;
+        return Ok(());
+    }
+    let id_url = constant::get_id_url(&username);
     let mut vec = vec![];
     let cookie = format!(".ROBLOSECURITY={}", std::env::var("ROBLO_SECURITY")?);
     let url = "https://web.roblox.com".parse::<reqwest::Url>()?;
@@ -73,12 +80,15 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         .gzip(true)
         .build()?;
     let id_res = client.get(&id_url).send().await?;
-    if !id_res.status().is_success(){
+    let text = id_res.text().await?;
+    let id_json: serde_json::Value = serde_json::from_str(&text)?;
+    let id_obj = id_json.as_object().unwrap();
+    //The success value only exists in the response value if the request failed
+    if id_obj.get("success").is_some() {
         mes.edit(&ctx, |m| m.content("Yar? Did you misspell the username put in")).await?;
         return Err(CommandError::from("Could not get username"));
     }
-    let id_json: serde_json::Value = serde_json::from_str(&id_res.text().await?)?;
-    let id = id_json.as_object().unwrap()["Id"].as_u64().unwrap().to_string();
+    let id = id_obj["Id"].as_u64().unwrap().to_string();
     let res = client.get(constant::get_avatar_url(&id)).send().await.unwrap();
     let avatar_url = res.url().as_str();
     for i in 0..constant::REQUEST_LIMIT {
@@ -101,7 +111,7 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     if vec.is_empty() {
         mes.edit(&ctx.http, |m| {
-            m.content("Yar! Are you online captian?")
+            m.content("Yar? Are you online captian?")
         })
         .await?;
     } else {
