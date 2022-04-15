@@ -49,7 +49,7 @@ async fn main() {
 #[only_in(guilds)]
 #[sub_commands(start, end)]
 async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.reply(&ctx.http, "~yar raid <start {username}, end>").await?;
+    msg.reply(&ctx.http, "~yar raid <start {username}, end>").await.unwrap();
     Ok(())
 }
 #[command("start")]
@@ -59,18 +59,18 @@ async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 /// Unwraps are allowed on the serde_json stuff because I can guarrentee that as long as roblox is avaiable
 /// and there is one person in the game they will not panic
 async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let mut mes = msg.reply(&ctx, "Starting a raid").await?;
+    let mut mes = msg.reply(&ctx, "Starting a raid").await.unwrap();
     let username;
     if let Ok(user) = args.single::<String>(){
         username = user
     } else {
-        mes.edit(&ctx.http, |m|m.content("~yar raid start {username}")).await?;
+        mes.edit(&ctx.http, |m|m.content("~yar raid start {username}")).await.unwrap();
         return Ok(());
     }
     let id_url = constant::get_id_url(&username);
     let mut vec = vec![];
-    let cookie = format!(".ROBLOSECURITY={}", std::env::var("ROBLO_SECURITY")?);
-    let url = "https://web.roblox.com".parse::<reqwest::Url>()?;
+    let cookie = format!(".ROBLOSECURITY={}", std::env::var("ROBLO_SECURITY").unwrap());
+    let url = "https://web.roblox.com".parse::<reqwest::Url>().unwrap();
     let jar = reqwest::cookie::Jar::default();
     jar.add_cookie_str(&cookie, &url);
     let client = reqwest::ClientBuilder::new()
@@ -78,14 +78,14 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         .cookie_store(true)
         .cookie_provider(std::sync::Arc::new(jar))
         .gzip(true)
-        .build()?;
-    let id_res = client.get(&id_url).send().await?;
-    let text = id_res.text().await?;
-    let id_json: serde_json::Value = serde_json::from_str(&text)?;
+        .build().unwrap();
+    let id_res = client.get(&id_url).send().await.unwrap();
+    let text = id_res.text().await.unwrap();
+    let id_json: serde_json::Value = serde_json::from_str(&text).unwrap();
     let id_obj = id_json.as_object().unwrap();
     //The success value only exists in the response value if the request failed
     if id_obj.get("success").is_some() {
-        mes.edit(&ctx, |m| m.content("Yar? Did you misspell the username put in")).await?;
+        mes.edit(&ctx, |m| m.content("Yar.unwrap() Did you misspell the username put in")).await.unwrap();
         return Err(CommandError::from("Could not get username"));
     }
     let id = id_obj["Id"].as_u64().unwrap().to_string();
@@ -93,9 +93,9 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let avatar_url = res.url().as_str();
     for i in 0..constant::REQUEST_LIMIT {
         let url = constant::get_game_instances(constant::PLACE_ID, i);
-        let res = client.get(url).send().await?;
-        let json = res.text().await?;
-        let json: serde_json::Value = serde_json::from_str(&json)?;
+        let res = client.get(url).send().await.unwrap();
+        let json = res.text().await.unwrap();
+        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
         let server = json.as_object().unwrap().clone();
         if server["Collection"].as_array().unwrap().is_empty(){
             break;
@@ -111,9 +111,9 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 
     if vec.is_empty() {
         mes.edit(&ctx.http, |m| {
-            m.content("Yar? Are you online captian?")
+            m.content("Yar.unwrap() Are you online captian.unwrap()")
         })
-        .await?;
+        .await.unwrap();
     } else {
         let join_url = constant::get_join_url(
             constant::PLACE_ID,
@@ -124,7 +124,7 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
                 "@everyone Yar! Rading time (open url in web browser to join your captian):\n{join_url}"
             ))
         })
-        .await?;
+        .await.unwrap();
     }
     Ok(())
 }
@@ -135,6 +135,6 @@ async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
 #[description("End a raid")]
 async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.reply(&ctx.http, "@everyone Yar! The raid is now over!")
-        .await?;
+        .await.unwrap();
     Ok(())
 }
