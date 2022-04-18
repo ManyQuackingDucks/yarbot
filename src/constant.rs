@@ -15,3 +15,7 @@ pub fn get_game_instances(place_id: &str, i: usize) -> String {
 pub fn get_join_url(place_id: &str, guid: &str) -> String {
     format!("https://web.roblox.com/home?placeID={place_id}&gameID={guid}")
 }
+
+pub fn get_game_url() -> &'static str {
+    "https://presence.roblox.com/v1/presence/users"
+}

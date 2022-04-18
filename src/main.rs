@@ -1,7 +1,18 @@
-use std::{env, vec};
-
-use serenity::framework::standard::macros::{command, group};
-use serenity::framework::standard::{Args, CommandResult, CommandError};
+#[macro_use]
+extern crate diesel;
+mod commands;
+pub mod config;
+#[allow(dead_code)]
+mod constant;
+pub mod models;
+pub mod schema;
+use commands::point::POINT_GROUP;
+use commands::raid::RAID_GROUP;
+use diesel::r2d2::ManageConnection;
+use fern::colors::{Color, ColoredLevelConfig};
+use log::info;
+use serenity::framework::standard::macros::hook;
+use serenity::framework::standard::{CommandError, DispatchError};
 
 use serenity::model::channel::Message;
 use serenity::prelude::*;
@@ -9,132 +20,121 @@ use serenity::{
     async_trait, client::bridge::gateway::GatewayIntents, framework::standard::StandardFramework,
     model::gateway::Ready,
 };
-#[group]
-#[commands(raid)]
-struct Basic;
+
+use std::{env, vec};
+
+struct SqliteClient;
+impl TypeMapKey for SqliteClient {
+    type Value = diesel::r2d2::ConnectionManager<diesel::sqlite::SqliteConnection>;
+}
+
+struct ReqwestClient;
+impl TypeMapKey for ReqwestClient {
+    type Value = reqwest::Client;
+}
 struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn ready(&self, _: Context, ready: Ready) {
-        println!("{} is connected!", ready.user.name);
+        info!("{} is connected!", ready.user.name);
     }
 }
 
-#[allow(dead_code)]
-mod constant;
+#[hook]
+async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+    log::info!("Dispatch Error occured");
+    #[allow(clippy::single_match)] //Will add more later
+    match error {
+        DispatchError::LackingRole => {
+            msg.reply(&ctx, "You don't have the required role.")
+                .await
+                .unwrap();
+        }
+        _ => {
+            msg.reply(&ctx, "An error occured.").await.unwrap();
+        }
+    }
+}
+
+#[hook]
+async fn after_hook(ctx: &Context, msg: &Message, cmd_name: &str, error: Result<(), CommandError>) {
+    //  Print out an error if it happened
+    if let Err(why) = error {
+        msg.reply(&ctx.http, "Sorry an error occured.")
+            .await
+            .unwrap();
+        log::error!("{cmd_name} - {why:?}");
+    }
+}
 
 #[tokio::main(flavor = "multi_thread")]
 async fn main() {
+    let colors = ColoredLevelConfig::new()
+        .info(Color::Green)
+        .warn(Color::Yellow)
+        .error(Color::Red)
+        .trace(Color::Magenta)
+        .debug(Color::Blue);
+    fern::Dispatch::new()
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "{colors}{date}[{target}][{level}{colors}] {message}\x1B[0m",
+                colors = format_args!("\x1B[{}m", colors.get_color(&record.level()).to_fg_str()),
+                date = chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
+                target = record.target(),
+                level = record.level(),
+                message = message,
+            ))
+        })
+        .level(log::LevelFilter::Warn)
+        .level_for("yarbot", log::LevelFilter::Debug)
+        .chain(std::io::stdout())
+        .apply()
+        .unwrap();
     dotenv::dotenv().unwrap();
+    let connection_manager =
+        diesel::r2d2::ConnectionManager::new(env::var("DATABASE_URL").unwrap());
+    connection_manager.connect().unwrap();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
-    let framework = StandardFramework::new().configure(|c| {
+    let framework = StandardFramework::new()
+        .configure(|c| {
             c.with_whitespace(true)
-                .delimiters(vec![", ", ","])
+                .delimiters(vec![", ", ",", " "])
                 .prefix("~yar")
                 .allow_dm(false)
         })
-        .group(&BASIC_GROUP);
+        .group(&RAID_GROUP)
+        .group(&POINT_GROUP)
+        .on_dispatch_error(dispatch_error)
+        .after(after_hook);
     let mut client = Client::builder(&token)
         .event_handler(Handler)
         .framework(framework)
         .intents(GatewayIntents::all())
         .await
         .expect("Err creating client");
-    client.start_autosharded().await.unwrap();
-}
-
-#[command("raid")]
-#[allowed_roles("Captian", "YarDev")]
-#[only_in(guilds)]
-#[sub_commands(start, end)]
-async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.reply(&ctx.http, "~yar raid <start {username}, end>").await.unwrap();
-    Ok(())
-}
-#[command("start")]
-#[allowed_roles("Captian", "YarDev")]
-#[only_in(guilds)]
-#[description("Start a raid. Provide the username that everyone will be joining the raid with.")]
-/// Unwraps are allowed on the serde_json stuff because I can guarrentee that as long as roblox is avaiable
-/// and there is one person in the game they will not panic
-async fn start(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
-    let mut mes = msg.reply(&ctx, "Starting a raid").await.unwrap();
-    let username;
-    if let Ok(user) = args.single::<String>(){
-        username = user
-    } else {
-        mes.edit(&ctx.http, |m|m.content("~yar raid start {username}")).await.unwrap();
-        return Ok(());
-    }
-    let id_url = constant::get_id_url(&username);
-    let mut vec = vec![];
-    let cookie = format!(".ROBLOSECURITY={}", std::env::var("ROBLO_SECURITY").unwrap());
-    let url = "https://web.roblox.com".parse::<reqwest::Url>().unwrap();
-    let jar = reqwest::cookie::Jar::default();
-    jar.add_cookie_str(&cookie, &url);
-    let client = reqwest::ClientBuilder::new()
-        .user_agent("Mozilla/5.0 (X11; Linux x86_64; rv:99.0) Gecko/20100101 Firefox/99.0")
-        .cookie_store(true)
-        .cookie_provider(std::sync::Arc::new(jar))
-        .gzip(true)
-        .build().unwrap();
-    let id_res = client.get(&id_url).send().await.unwrap();
-    let text = id_res.text().await.unwrap();
-    let id_json: serde_json::Value = serde_json::from_str(&text).unwrap();
-    let id_obj = id_json.as_object().unwrap();
-    //The success value only exists in the response value if the request failed
-    if id_obj.get("success").is_some() {
-        mes.edit(&ctx, |m| m.content("Yar.unwrap() Did you misspell the username put in")).await.unwrap();
-        return Err(CommandError::from("Could not get username"));
-    }
-    let id = id_obj["Id"].as_u64().unwrap().to_string();
-    let res = client.get(constant::get_avatar_url(&id)).send().await.unwrap();
-    let avatar_url = res.url().as_str();
-    for i in 0..constant::REQUEST_LIMIT {
-        let url = constant::get_game_instances(constant::PLACE_ID, i);
-        let res = client.get(url).send().await.unwrap();
-        let json = res.text().await.unwrap();
-        let json: serde_json::Value = serde_json::from_str(&json).unwrap();
-        let server = json.as_object().unwrap().clone();
-        if server["Collection"].as_array().unwrap().is_empty(){
-            break;
-        }
-        for x in server["Collection"].as_array().unwrap().clone() {
-            for y in x.as_object().unwrap()["CurrentPlayers"].as_array().unwrap() {
-                if y.as_object().unwrap()["Thumbnail"].as_object().unwrap()["Url"].as_str().unwrap() == avatar_url {
-                    vec.push(x.as_object().unwrap()["Guid"].as_str().unwrap().to_string()); //Should really only be one
-                }
-            }
-        }
-    }
-
-    if vec.is_empty() {
-        mes.edit(&ctx.http, |m| {
-            m.content("Yar.unwrap() Are you online captian.unwrap()")
-        })
-        .await.unwrap();
-    } else {
-        let join_url = constant::get_join_url(
-            constant::PLACE_ID,
-            &vec[0],
+    {
+        let mut data = client.data.write().await;
+        data.insert::<SqliteClient>(connection_manager);
+        let cookie = format!(
+            ".ROBLOSECURITY={}",
+            std::env::var("ROBLO_SECURITY").unwrap()
         );
-        mes.edit(&ctx.http, |m| {
-            m.content(format!(
-                "@everyone Yar! Rading time (open url in web browser to join your captian):\n{join_url}"
-            ))
-        })
-        .await.unwrap();
+        let url = "https://web.roblox.com".parse::<reqwest::Url>().unwrap();
+        let url_2 = "https://presence.roblox.com"
+            .parse::<reqwest::Url>()
+            .unwrap();
+        let jar = reqwest::cookie::Jar::default();
+        jar.add_cookie_str(&cookie, &url);
+        jar.add_cookie_str(&cookie, &url_2);
+        let client = reqwest::ClientBuilder::new()
+            .cookie_store(true)
+            .cookie_provider(std::sync::Arc::new(jar))
+            .gzip(true)
+            .build()
+            .unwrap();
+        data.insert::<ReqwestClient>(client);
     }
-    Ok(())
-}
-
-#[command("end")]
-#[allowed_roles("Captian", "YarDev")]
-#[only_in(guilds)]
-#[description("End a raid")]
-async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
-    msg.reply(&ctx.http, "@everyone Yar! The raid is now over!")
-        .await.unwrap();
-    Ok(())
+    client.start_autosharded().await.unwrap();
 }

@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 serenity = {version = "0.10", default-features=false,  features = ["native_tls_backend", "default_no_backend"]}
-reqwest = {version = "0.11.10", features = ["cookies", "gzip"]}
+reqwest = {version = "0.11.10", features = ["cookies", "gzip", "json"]}
 serde_json = "1.0.79"
 tokio = { version = "1.17.0", features = ["macros", "rt-multi-thread"] }
 dotenv = "0.15.0"
+log = "0.4.16"
+fern = {version = "0.6.0", features = ["colored"]}
+chrono = "0.4.19"
+diesel = {version = "^2.0.0", features = ["sqlite", "r2d2"], git = "https://github.com/diesel-rs/diesel"}
