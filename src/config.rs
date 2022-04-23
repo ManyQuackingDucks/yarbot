@@ -1,6 +1,6 @@
 use crate::{
     models::{ConfigInsert, ConfigQuery},
-    schema::config::dsl::*,
+    schema::config::dsl::{config, key, value},
 };
 use diesel::query_dsl::RunQueryDsl;
 use diesel::ExpressionMethods;

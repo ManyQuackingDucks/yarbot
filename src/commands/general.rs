@@ -1,5 +1,12 @@
 use diesel::r2d2::ManageConnection;
-use serenity::{framework::standard::{macros::{group, command}, Args, CommandResult}, client::Context, model::channel::Message};
+use serenity::{
+    client::Context,
+    framework::standard::{
+        macros::{command, group},
+        Args, CommandResult,
+    },
+    model::channel::Message,
+};
 
 use crate::SqliteClient;
 
@@ -18,6 +25,6 @@ async fn set_channel(ctx: &Context, msg: &Message, _args: Args) -> CommandResult
         .ok_or("Could not get connection manager")?;
     let mut conn = conn_manager.connect()?;
     crate::config::set("bot_channel_id", &channel_id, &mut conn)?;
-    msg.reply(&ctx.http, "Set raid channel").await?;
+    msg.reply(&ctx.http, "Set bot command channel").await?;
     Ok(())
 }

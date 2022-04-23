@@ -1,9 +1,9 @@
 #![allow(unused_variables)]
-use crate::commands::POINT_COMMAND_CHECK;
 use crate::commands::BOT_COMMAND_CHECK;
+use crate::commands::POINT_COMMAND_CHECK;
 use crate::{
     models::{UserInsertPoint, UserQueryPoint},
-    schema::points::dsl::*,
+    schema::points::dsl::{id, points, user_points},
 };
 use diesel::query_dsl::RunQueryDsl;
 use diesel::ExpressionMethods;
@@ -33,7 +33,7 @@ pub async fn point(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[checks(point_command)]
-#[allowed_roles("Point","Captian")]
+#[allowed_roles("Point", "Captian")]
 async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg: String = args.single()?;
     let arg2: i32 = args.single()?;
@@ -114,5 +114,16 @@ async fn list(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
         string.push_str(&format!("{} - {}\n", item.id, item.user_points));
     }
     msg.reply(&ctx.http, string).await?;
+    Ok(())
+}
+
+#[command]
+async fn set_channel(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
+    let data = ctx.data.read().await;
+    let conn_manager = data
+        .get::<SqliteClient>()
+        .ok_or("Could not get connection manager")?;
+    let mut conn = conn_manager.connect()?;
+    crate::config::set("point_channel_id", &msg.channel_id.to_string(), &mut conn)?;
     Ok(())
 }

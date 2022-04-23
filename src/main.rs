@@ -1,3 +1,5 @@
+#![warn(clippy::nursery)]
+#![warn(clippy::pedantic)]
 #[macro_use]
 extern crate diesel;
 mod commands;
@@ -17,7 +19,7 @@ use serenity::framework::standard::{CommandError, DispatchError};
 use serenity::model::channel::Message;
 use serenity::prelude::*;
 use serenity::{
-    async_trait, client::bridge::gateway::GatewayIntents, framework::standard::StandardFramework,
+    async_trait, framework::standard::StandardFramework,
     model::gateway::Ready,
 };
 
@@ -42,7 +44,7 @@ impl EventHandler for Handler {
 }
 
 #[hook]
-async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError) {
+async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     log::info!("Dispatch Error occured");
     #[allow(clippy::single_match)] //Will add more later
     match error {
@@ -85,7 +87,7 @@ async fn main() {
                 target = record.target(),
                 level = record.level(),
                 message = message,
-            ))
+            ));
         })
         .level(log::LevelFilter::Warn)
         .level_for("yarbot", log::LevelFilter::Debug)
@@ -108,7 +110,7 @@ async fn main() {
         .group(&POINT_GROUP)
         .on_dispatch_error(dispatch_error)
         .after(after_hook);
-    let mut client = Client::builder(&token)
+    let mut client = Client::builder(&token, GatewayIntents::all())
         .event_handler(Handler)
         .framework(framework)
         .intents(GatewayIntents::all())
