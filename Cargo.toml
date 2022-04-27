@@ -19,3 +19,9 @@ diesel = {version = "2.0.0-rc.0", features = ["sqlite", "r2d2"]}
 [features]
 stable = []
 cache = ["serenity/cache"]
+
+[[bin]]
+name = "yarbot"
+[lib]
+crate-type = ["cdylib"]
+path = "src/main.rs"

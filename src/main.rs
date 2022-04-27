@@ -70,8 +70,17 @@ async fn after_hook(ctx: &Context, msg: &Message, cmd_name: &str, error: Result<
     }
 }
 
-#[tokio::main(flavor = "multi_thread")]
-async fn main() {
+#[no_mangle]
+pub extern "C" fn startMain(){
+    #[allow(clippy::main_recursion)]//This is fine because we need to be able to execute the bot inside python to get around replit limitations
+    main();
+}
+
+fn main(){
+    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+    rt.block_on(run());
+}
+async fn run() {
     let colors = ColoredLevelConfig::new()
         .info(Color::Green)
         .warn(Color::Yellow)
