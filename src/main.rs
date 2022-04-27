@@ -75,7 +75,7 @@ async fn after_hook(ctx: &Context, msg: &Message, cmd_name: &str, error: Result<
     }
 }
 
-cpython::py_module_initializer!(yarbot, |py, m| {
+cpython::py_module_initializer!(libyarbot, |py, m| {
     m.add(py, "__doc__", "Run the bot with start()")?;
     #[allow(clippy::manual_strip)]
     m.add(py, "start", py_fn!(py, main_py()))?;

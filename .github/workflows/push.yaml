@@ -20,9 +20,10 @@ jobs:
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: x86_64-unknown-linux-musl
+          target: x86_64-unknown-linux-gnu
           profile: minimal
-          override: true
+          override: false
+
       - name: Rust Cache
         uses: Swatinem/rust-cache@v1.3.0
 
