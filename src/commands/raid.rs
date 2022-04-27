@@ -123,7 +123,7 @@ pub async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-#[command("set channel")]
+#[command("channel")]
 #[only_in(guilds)]
 async fn set_channel(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let channel_id = msg.channel_id.to_string();
