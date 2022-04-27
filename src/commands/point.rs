@@ -33,8 +33,7 @@ pub async fn point(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[checks(point_command)]
-#[allowed_roles("Point", "Captian")]
-async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+casync fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg: String = args.single()?;
     let arg2: i32 = args.single()?;
     log::info!("Adding {arg2} points to {arg}");
@@ -119,6 +118,7 @@ async fn list(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+#[allowed_roles("Captain")]
 async fn set(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
     let data = ctx.data.read().await;
     let conn_manager = data

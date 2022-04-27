@@ -125,6 +125,7 @@ pub async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[only_in(guilds)]
+#[allowed_roles("Captain")]
 async fn set(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let channel_id = msg.channel_id.to_string();
     let data = ctx.data.read().await;
