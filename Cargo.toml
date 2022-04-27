@@ -25,5 +25,5 @@ cache = ["serenity/cache"]
 [[bin]]
 name = "yarbot"
 [lib]
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 path = "src/main.rs"
