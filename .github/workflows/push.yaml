@@ -16,13 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Cache
-        uses: actions/cache@v3
-        with:
-            # A list of files, directories, and wildcard patterns to cache and restore
-          path: target/
-            # An explicit key for restoring and saving the cache
-          key: target-files
       - name: Install rust
         uses: actions-rs/toolchain@v1
         with:
@@ -31,7 +24,8 @@ jobs:
           components: rustfmt
           profile: minimal
           override: true
-
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v1.3.0
       - name: Build
         uses: actions-rs/cargo@v1
         with:
