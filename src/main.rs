@@ -77,6 +77,7 @@ cpython::py_module_initializer!(rust2py, |py, m| {
     m.add(py, "start", py_fn!(py, main_py()))?;
     Ok(())
 });
+
 #[allow(clippy::unnecessary_wraps)]
 fn main_py(_: Python) -> PyResult<String>{
     #[allow(clippy::main_recursion)]//Fine because needs to be executed from python
