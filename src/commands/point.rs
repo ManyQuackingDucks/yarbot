@@ -33,7 +33,7 @@ pub async fn point(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
 
 #[command]
 #[checks(point_command)]
-casync fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
+async fn add(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
     let arg: String = args.single()?;
     let arg2: i32 = args.single()?;
     log::info!("Adding {arg2} points to {arg}");
