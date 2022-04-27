@@ -117,7 +117,7 @@ async fn list(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     Ok(())
 }
 
-#[command("set channel")]
+#[command("channel")]
 #[only_in(guilds)]
 async fn set_channel(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
     let data = ctx.data.read().await;
