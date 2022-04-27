@@ -11,13 +11,13 @@ use serenity::{
 use crate::SqliteClient;
 
 #[group]
-#[commands(set_channel)]
-#[allowed_roles("Captain")]
+#[commands(set)]
 struct General;
 
-#[command("channel")]
+#[command]
 #[only_in(guilds)]
-async fn set_channel(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+#[allowed_roles("Captain")]
+async fn set(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let channel_id = msg.channel_id.to_string();
     let data = ctx.data.read().await;
     let conn_manager = data

@@ -19,7 +19,7 @@ pub struct Raid;
 
 #[command("raid")]
 #[only_in(guilds)]
-#[sub_commands(start, end, set_channel)]
+#[sub_commands(start, end, set)]
 #[checks(raid_command)]
 pub async fn raid(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.reply(&ctx.http, "~yar raid <start {username}, end>")
@@ -123,9 +123,9 @@ pub async fn end(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     Ok(())
 }
 
-#[command("channel")]
+#[command]
 #[only_in(guilds)]
-async fn set_channel(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
+async fn set(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     let channel_id = msg.channel_id.to_string();
     let data = ctx.data.read().await;
     let conn_manager = data

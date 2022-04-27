@@ -1,0 +1,16 @@
+run = ["mold", "-run", "cargo", "run"]
+
+entrypoint = "src/main.rs"
+
+[packager]
+language = "rust"
+
+[packager.features]
+packageSearch = true
+
+[languages.rust]
+pattern = "**/*.rs"
+
+
+[nix]
+channel = "stable-21_11"
