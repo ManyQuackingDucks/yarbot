@@ -126,5 +126,6 @@ async fn set(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
         .ok_or("Could not get connection manager")?;
     let mut conn = conn_manager.connect()?;
     crate::config::set("point_channel_id", &msg.channel_id.to_string(), &mut conn)?;
+    msg.reply(&ctx.http, "Set points channel");
     Ok(())
 }

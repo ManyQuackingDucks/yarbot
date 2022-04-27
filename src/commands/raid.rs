@@ -134,6 +134,6 @@ async fn set(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
         .ok_or("Could not get connection manager")?;
     let mut conn = conn_manager.connect()?;
     crate::config::set("raid_channel_id", &channel_id, &mut conn)?;
-    msg.reply(&ctx.http, "Set raid channel").await?;
+    msg.reply(&ctx.http, "Set raid channel.").await?;
     Ok(())
 }

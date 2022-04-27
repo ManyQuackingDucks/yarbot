@@ -58,8 +58,8 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &
                 .unwrap();
         }
         _ => {
-            msg.reply(&ctx, "An error occured.").await.unwrap();
-            log::error!("{:?}", error);
+            msg.reply(&ctx, "Sorry, an error occured.").await.unwrap();
+            log::error!("Dispatch error: {:?}", error);
         }
     }
 }
