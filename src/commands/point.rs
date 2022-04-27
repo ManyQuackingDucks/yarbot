@@ -25,7 +25,7 @@ pub struct Point;
 
 #[command("point")]
 #[only_in(guilds)]
-#[sub_commands(add, take, list, get)]
+#[sub_commands(add, take, list, get, set_channel)]
 pub async fn point(ctx: &Context, msg: &Message, _args: Args) -> CommandResult {
     msg.reply(&ctx, "~yar point <add {user mention} {points to add}, take {user mentition} {points to take}, list, get {user mentition}>\nAdd and Take require the Point role").await?;
     Ok(())
@@ -117,7 +117,8 @@ async fn list(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     Ok(())
 }
 
-#[command]
+#[command("set channel")]
+#[only_in(guilds)]
 async fn set_channel(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
     let data = ctx.data.read().await;
     let conn_manager = data
