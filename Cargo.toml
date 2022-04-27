@@ -14,7 +14,9 @@ dotenv = "0.15.0"
 log = "0.4.16"
 fern = {version = "0.6.0", features = ["colored"]}
 chrono = "0.4.19"
+libsqlite3-sys = { version = ">=0.17.2, <0.25.0", features = ["bundled"] } # Link the bundled sqlite lib not the system one
 diesel = {version = "2.0.0-rc.0", features = ["sqlite", "r2d2"]}
+cpython = "0.7.0"
 
 [features]
 stable = []
@@ -23,5 +25,5 @@ cache = ["serenity/cache"]
 [[bin]]
 name = "yarbot"
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["dylib"]
 path = "src/main.rs"

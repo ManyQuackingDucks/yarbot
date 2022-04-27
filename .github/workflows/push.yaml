@@ -31,18 +31,16 @@ jobs:
           components: rustfmt
           profile: minimal
           override: true
-      - run: sudo apt update
-      - run: sudo apt install musl-tools
 
       - name: Build
         uses: actions-rs/cargo@v1
         with:
             command: build
-            args: --release --target x86_64-unknown-linux-musl
+            args: --release
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4
         with:
           # Artifact name
           name: yarbot 
-          path: target/x86_64-unknown-linux-musl/release/yarbot
+          path: target/release/yarbot
 

@@ -10,6 +10,7 @@ pub mod models;
 pub mod schema;
 use commands::point::POINT_GROUP;
 use commands::raid::RAID_GROUP;
+use cpython::{py_fn, PyResult, Python};
 use diesel::r2d2::ManageConnection;
 use fern::colors::{Color, ColoredLevelConfig};
 use log::info;
@@ -70,12 +71,18 @@ async fn after_hook(ctx: &Context, msg: &Message, cmd_name: &str, error: Result<
     }
 }
 
-#[no_mangle]
-pub extern "C" fn startMain(){
-    #[allow(clippy::main_recursion)]//This is fine because we need to be able to execute the bot inside python to get around replit limitations
+cpython::py_module_initializer!(rust2py, |py, m| {
+    m.add(py, "__doc__", "Run the bot with start()")?;
+    #[allow(clippy::manual_strip)]
+    m.add(py, "start", py_fn!(py, main_py()))?;
+    Ok(())
+});
+#[allow(clippy::unnecessary_wraps)]
+fn main_py(_: Python) -> PyResult<String>{
+    #[allow(clippy::main_recursion)]//Fine because needs to be executed from python
     main();
+    Ok("".to_string())
 }
-
 fn main(){
     let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
     rt.block_on(run());
