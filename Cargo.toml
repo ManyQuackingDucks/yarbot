@@ -17,7 +17,7 @@ chrono = "0.4.19"
 libsqlite3-sys = { version = ">=0.17.2, <0.25.0", features = ["bundled"] } # Link the bundled sqlite lib not the system one
 diesel = {version = "2.0.0-rc.0", features = ["sqlite", "r2d2"]}
 cpython = {version = "0.7.0", features = ["extension-module"]}
-
+diesel_migrations = "2.0.0-rc.0"
 [features]
 stable = []
 cache = ["serenity/cache"]

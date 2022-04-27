@@ -2,6 +2,7 @@
 #![warn(clippy::pedantic)]
 #[macro_use]
 extern crate diesel;
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 mod commands;
 pub mod config;
 #[allow(dead_code)]
@@ -11,7 +12,9 @@ pub mod schema;
 use commands::point::POINT_GROUP;
 use commands::raid::RAID_GROUP;
 use cpython::{py_fn, PyResult, Python};
-use diesel::r2d2::ManageConnection;
+use diesel::SqliteConnection;
+use diesel::r2d2::{ManageConnection, ConnectionManager};
+use diesel_migrations::{EmbeddedMigrations, embed_migrations, MigrationHarness};
 use fern::colors::{Color, ColoredLevelConfig};
 use log::info;
 use serenity::framework::standard::macros::hook;
@@ -113,9 +116,10 @@ async fn run() {
         .apply()
         .unwrap();
     dotenv::dotenv().ok();
-    let connection_manager =
+    let connection_manager: ConnectionManager<SqliteConnection> =
         diesel::r2d2::ConnectionManager::new(env::var("DATABASE_URL").unwrap());
-    connection_manager.connect().unwrap();
+    let mut conn  = connection_manager.connect().unwrap();
+    conn.run_pending_migrations(MIGRATIONS).unwrap();
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let framework = StandardFramework::new()
         .configure(|c| {
