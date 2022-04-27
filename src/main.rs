@@ -47,7 +47,7 @@ impl EventHandler for Handler {
 #[hook]
 async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
     log::info!("Dispatch Error occured");
-    #[allow(clippy::single_match)] //Will add more later
+    #[allow(clippy::single_match_else)] //Will add more later
     match error {
         DispatchError::LackingRole => {
             msg.reply(&ctx, "You don't have the required role.")
@@ -56,6 +56,7 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &
         }
         _ => {
             msg.reply(&ctx, "An error occured.").await.unwrap();
+            log::error!("{:?}", error);
         }
     }
 }
