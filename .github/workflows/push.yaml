@@ -41,6 +41,6 @@ jobs:
         uses: actions/upload-artifact@v2.2.4
         with:
           # Artifact name
-          name: yarbot 
-          path: target/release/yarbot
+          name: libyarbot.so
+          path: target/release/libyarbot.so
 
