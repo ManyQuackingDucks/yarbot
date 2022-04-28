@@ -26,13 +26,12 @@ pub async fn bot_command(ctx: &Context, msg: &Message) -> Result<(), Reason> {
     };
     match config_channel_id {
         Some(config_channel_id) => {
-            if channel_id== config_channel_id {
+            if channel_id == config_channel_id {
                 return Ok(());
             }
             return Err(Reason::User(
                 "You can't use this command in this channel".to_string(),
             ));
-            
         }
         None => {
             return Err(Reason::User("Please set the bot channel".to_string()));

@@ -31,7 +31,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
             command: build
-            args: --release
+            args: --release --features cache --features replit
 
       - name: Upload a Build Artifact
         uses: actions/upload-artifact@v2.2.4

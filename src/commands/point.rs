@@ -119,7 +119,7 @@ async fn list(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
 #[command]
 #[only_in(guilds)]
 #[allowed_roles("Captain")]
-async fn set(ctx: &Context, msg: &Message, _: Args) -> CommandResult{
+async fn set(ctx: &Context, msg: &Message, _: Args) -> CommandResult {
     let data = ctx.data.read().await;
     let conn_manager = data
         .get::<SqliteClient>()

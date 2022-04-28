@@ -8,25 +8,23 @@ mod commands;
 pub mod config;
 #[allow(dead_code)]
 mod constant;
+mod hooks;
 pub mod models;
+#[cfg(feature = "replit")]
+mod python_support;
 pub mod schema;
 use commands::point::POINT_GROUP;
 use commands::raid::RAID_GROUP;
-use cpython::{py_fn, PyResult, Python};
+use diesel::r2d2::{ConnectionManager, ManageConnection};
 use diesel::SqliteConnection;
-use diesel::r2d2::{ManageConnection, ConnectionManager};
-use diesel_migrations::{EmbeddedMigrations, embed_migrations, MigrationHarness};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use fern::colors::{Color, ColoredLevelConfig};
+use hooks::{after_hook, dispatch_error};
 use log::info;
-use serenity::framework::standard::macros::hook;
-use serenity::framework::standard::{CommandError, DispatchError, Reason};
 
-use serenity::model::channel::Message;
+use serenity::model::gateway::Activity;
 use serenity::prelude::*;
-use serenity::{
-    async_trait, framework::standard::StandardFramework,
-    model::gateway::Ready,
-};
+use serenity::{async_trait, framework::standard::StandardFramework, model::gateway::Ready};
 
 use std::{env, vec};
 
@@ -43,73 +41,19 @@ struct Handler;
 
 #[async_trait]
 impl EventHandler for Handler {
-    async fn ready(&self, _: Context, ready: Ready) {
+    async fn ready(&self, ctx: Context, ready: Ready) {
         info!("{} is connected!", ready.user.name);
+        ctx.set_activity(Activity::playing("Pretty Much Evry Bordr Gaem"))
+            .await;
     }
 }
 
-#[hook]
-async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &str) {
-    log::info!("Dispatch Error occured");
-    #[allow(clippy::single_match_else)] //Will add more later
-    match error {
-        DispatchError::LackingRole => {
-            msg.reply(&ctx, "You don't have the required role.")
-                .await
-                .unwrap();
-        }
-        DispatchError::CheckFailed(_, e) => match e{
-            Reason::User(e) => {
-                msg.reply(&ctx, e.to_string()).await.unwrap();
-            }
-            Reason::UserAndLog { user, log } => {
-                msg.reply(&ctx, user).await.unwrap();
-                log::error!("{log}");
-            }
-            Reason::Log(e) => {
-                log::error!("{e}");
-                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
-            }
-            Reason::Unknown => {
-                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
-            }
-            _ => {
-                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
-            }
-        }
-        _ => {
-            msg.reply(&ctx, "Sorry, an error occured.").await.unwrap();
-            log::error!("Dispatch error: {:?}", error);
-        }
-    }
-}
-
-#[hook]
-async fn after_hook(ctx: &Context, msg: &Message, cmd_name: &str, error: Result<(), CommandError>) {
-    //  Print out an error if it happened
-    if let Err(why) = error {
-        msg.reply(&ctx.http, "Sorry an error occured.")
-            .await
-            .unwrap();
-        log::error!("{cmd_name} - {why:?}");
-    }
-}
-
-cpython::py_module_initializer!(libyarbot, |py, m| {
-    m.add(py, "__doc__", "Run the bot with start()")?;
-    #[allow(clippy::manual_strip)]
-    m.add(py, "start", py_fn!(py, main_py()))?;
-    Ok(())
-});
-
-#[allow(clippy::unnecessary_wraps)]
-fn main_py(_: Python) -> PyResult<String>{
-    #[allow(clippy::main_recursion)]//Fine because needs to be executed from python
-    main();
-    Ok("".to_string())
-}
-fn main(){
-    let rt = tokio::runtime::Builder::new_multi_thread().enable_all().build().unwrap();
+#[allow(dead_code)] //This is also a binary so this is required
+fn main() {
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
     rt.block_on(run());
 }
 async fn run() {
@@ -138,8 +82,8 @@ async fn run() {
     dotenv::dotenv().ok();
     let connection_manager: ConnectionManager<SqliteConnection> =
         diesel::r2d2::ConnectionManager::new(env::var("DATABASE_URL").unwrap());
-    let mut conn  = connection_manager.connect().unwrap();
-    conn.run_pending_migrations(MIGRATIONS).unwrap();
+    let mut conn = connection_manager.connect().unwrap();
+    conn.run_pending_migrations(MIGRATIONS).unwrap(); //Run migrations if required
     let token = env::var("DISCORD_TOKEN").expect("Expected a token in the environment");
     let framework = StandardFramework::new()
         .configure(|c| {

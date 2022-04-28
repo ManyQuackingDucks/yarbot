@@ -16,14 +16,18 @@ fern = {version = "0.6.0", features = ["colored"]}
 chrono = "0.4.19"
 libsqlite3-sys = { version = ">=0.17.2, <0.25.0", features = ["bundled"] } # Link the bundled sqlite lib not the system one
 diesel = {version = "2.0.0-rc.0", features = ["sqlite", "r2d2"]}
-cpython = {version = "0.7.0", features = ["extension-module"]}
+cpython = {version = "0.7.0", features = ["extension-module"], optional = true}
 diesel_migrations = "2.0.0-rc.0"
+
 [features]
 stable = []
+#Cache uses up a good bit of memory so only use it when nessasary
 cache = ["serenity/cache"]
+replit = ["cpython"]
 
 [[bin]]
 name = "yarbot"
+
 [lib]
 crate-type = ["cdylib"]
 path = "src/main.rs"
