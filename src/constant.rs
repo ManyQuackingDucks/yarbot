@@ -1,6 +1,5 @@
 pub const REQUEST_LIMIT: usize = 20;
 pub const RETRY_LIMIT: usize = 100;
-pub const PLACE_ID: &str = "3411100258"; //TODO: Add place id
 pub fn get_avatar_url(user_id: &str) -> String {
     format!("https://www.roblox.com/headshot-thumbnail/image?userId={user_id}&width=48&height=48&format=png")
 }

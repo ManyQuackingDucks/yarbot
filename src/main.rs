@@ -1,5 +1,6 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::missing_errors_doc)]
 #[macro_use]
 extern crate diesel;
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
@@ -18,7 +19,7 @@ use diesel_migrations::{EmbeddedMigrations, embed_migrations, MigrationHarness};
 use fern::colors::{Color, ColoredLevelConfig};
 use log::info;
 use serenity::framework::standard::macros::hook;
-use serenity::framework::standard::{CommandError, DispatchError};
+use serenity::framework::standard::{CommandError, DispatchError, Reason};
 
 use serenity::model::channel::Message;
 use serenity::prelude::*;
@@ -56,6 +57,25 @@ async fn dispatch_error(ctx: &Context, msg: &Message, error: DispatchError, _: &
             msg.reply(&ctx, "You don't have the required role.")
                 .await
                 .unwrap();
+        }
+        DispatchError::CheckFailed(_, e) => match e{
+            Reason::User(e) => {
+                msg.reply(&ctx, e.to_string()).await.unwrap();
+            }
+            Reason::UserAndLog { user, log } => {
+                msg.reply(&ctx, user).await.unwrap();
+                log::error!("{log}");
+            }
+            Reason::Log(e) => {
+                log::error!("{e}");
+                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
+            }
+            Reason::Unknown => {
+                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
+            }
+            _ => {
+                msg.reply(&ctx, "Sorry an error occured").await.unwrap();
+            }
         }
         _ => {
             msg.reply(&ctx, "Sorry, an error occured.").await.unwrap();
