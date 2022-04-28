@@ -49,7 +49,7 @@ async fn channel_check(ctx: &Context, channel_id: String, config_name: &str) -> 
             ))
         }
         None => {
-            Err(Reason::User("Please set the bot channel".to_string()))
+            Err(Reason::User("Please set the channel for this command".to_string()))
         }
     }
 }

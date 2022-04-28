@@ -88,11 +88,10 @@ async fn get(ctx: &Context, msg: &Message, mut args: Args) -> CommandResult {
         .get::<SqliteClient>()
         .ok_or("Could not get connection manager")?;
     let mut conn = conn_manager.connect()?;
-    let result = points
+    let result: UserQueryPoint = points
         .filter(id.eq(arg))
-        .limit(1)
-        .load::<UserQueryPoint>(&mut conn)?;
-    msg.reply(&ctx, result[0].user_points).await?;
+        .first(&mut conn)?;
+    msg.reply(&ctx, result.user_points).await?;
     Ok(())
 }
 #[command]
